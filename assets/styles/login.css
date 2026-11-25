@@ -559,8 +559,10 @@ input {
     }
     .login-shell {
         grid-template-columns: 1fr;
+        min-height: 100vh;
     }
     .login-left {
+        min-height: 100vh;
         padding: 86px 22px 32px;
     }
     .brand-corner {
@@ -568,10 +570,6 @@ input {
         left: 20px;
     }
     .login-right-wrap {
-        padding: 0 16px 20px;
-    }
-    .login-showcase {
-        gap: 20px;
-        padding: 28px 20px;
+        display: none;
     }
 }

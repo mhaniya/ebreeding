@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>e-Breeding BBPTUHPT Baturraden</title>
-    <link rel="stylesheet" href="/assets/styles/landing.css">
+    <link rel="stylesheet" href="/assets/styles/landing.css?v=<?php echo @filemtime(FCPATH . 'assets/styles/landing.css') ?: '2'; ?>">
 </head>
 
 <body>
@@ -24,7 +24,7 @@
                 <span class="brand-divider" aria-hidden="true"></span>
             </div>
 
-            <nav aria-label="Navigasi utama">
+            <nav class="main-nav" id="mainNav" aria-label="Navigasi utama">
                 <ul class="nav-links">
                     <li><a href="/" class="active">Home</a></li>
                     <li><a href="/landingpage/analisa">e-Analisa</a></li>
@@ -48,6 +48,17 @@
                         <line x1="15" y1="12" x2="3" y2="12" />
                     </svg>
                 </a>
+                <button type="button" class="icon-btn menu-toggle" id="menuToggle" aria-label="Buka menu navigasi" aria-controls="mainNav" aria-expanded="false">
+                    <svg class="icon-hamburger" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                        <line x1="4" y1="7" x2="20" y2="7" />
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                        <line x1="4" y1="17" x2="20" y2="17" />
+                    </svg>
+                    <svg class="icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -337,6 +348,24 @@
         (function () {
             var openers = document.querySelectorAll('[data-modal-open]');
             var modals = document.querySelectorAll('.modal-backdrop');
+            var menuToggle = document.getElementById('menuToggle');
+            var mainNav = document.getElementById('mainNav');
+
+            function closeMenu() {
+                if (!menuToggle || !mainNav) return;
+                mainNav.classList.remove('open');
+                menuToggle.classList.remove('is-open');
+                menuToggle.setAttribute('aria-expanded', 'false');
+            }
+
+            if (menuToggle && mainNav) {
+                menuToggle.addEventListener('click', function () {
+                    var willOpen = !mainNav.classList.contains('open');
+                    mainNav.classList.toggle('open', willOpen);
+                    menuToggle.classList.toggle('is-open', willOpen);
+                    menuToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                });
+            }
 
             function closeAll() {
                 modals.forEach(function (m) { m.classList.remove('open'); });
@@ -344,6 +373,7 @@
 
             openers.forEach(function (btn) {
                 btn.addEventListener('click', function () {
+                    closeMenu();
                     closeAll();
                     var target = document.getElementById('modal-' + btn.getAttribute('data-modal-open'));
                     if (target) target.classList.add('open');
@@ -359,7 +389,10 @@
             });
 
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') closeAll();
+                if (e.key === 'Escape') {
+                    closeAll();
+                    closeMenu();
+                }
             });
         })();
     </script>
