@@ -1,0 +1,198 @@
+<script language="javascript" type="text/javascript" src="/assets/js/autosuggest/jquery.coolautosuggest.js"></script>
+<script language="javascript" type="text/javascript" src="/assets/js/autosuggest/jquery.coolfieldset.js"></script>
+<script src="/assets/js/list.js"></script>
+<script src="/assets/js/app.js"></script>
+<script>
+$(document).ready(function() {
+    var reproduksiCsrf = null;
+    <?php if ($this->config->item('csrf_protection')) { ?>
+    reproduksiCsrf = {name: <?=json_encode($this->security->get_csrf_token_name()); ?>, hash: <?=json_encode($this->security->get_csrf_hash()); ?>};
+    <?php } ?>
+    $('#btnInfo').on('click', function() { $('#ModalPanduanPemeriksaanReproduksi').modal('show'); });
+    $('#btnLaporanPemeriksaanReproduksi').on('click', function() { $('#ModalLaporanPemeriksaanReproduksi').modal('show'); });
+    $('#kotakUpload').on('click', function() { $('#fileImportPemeriksaanReproduksi').click(); });
+    $('#fileImportPemeriksaanReproduksi').on('change', function() {
+        var input=this, file=input.files[0]; if(!file) return;
+        if(!/\.(xls|xlsx|csv)$/i.test(file.name) || !file.size || file.size>2097152){toastr.warning('Pilih file .xls, .xlsx, atau .csv, maksimal 2 MB.');input.value='';return;}
+        var body=new FormData();body.append('file',file);if(reproduksiCsrf)body.append(reproduksiCsrf.name,reproduksiCsrf.hash);
+        $('#kotakUpload').prop('disabled',true);
+        $.ajax({url: <?=json_encode(site_url('kesehatan/pemeriksaan_reproduksi/import')); ?>,type:'POST',data:body,processData:false,contentType:false,dataType:'json'})
+        .done(function(result){
+            if(result.csrf)reproduksiCsrf=result.csrf;
+            var box=$('#hasilImportPemeriksaanReproduksi').empty();
+            $('<p>').text('Import selesai: '+result.success+' baris tersimpan, '+result.skipped+' baris identik dilewati, '+result.errors.length+' pesan kesalahan.').appendTo(box);
+            $.each(result.errors,function(_,msg){$('<div>').addClass('text-danger').text(msg).appendTo(box);});
+            $.each(result.warnings,function(_,msg){$('<div>').addClass('text-warning').text(msg).appendTo(box);});
+            $('#ModalLaporanPemeriksaanReproduksi').modal('show');$('#tbldata').DataTable().ajax.reload(null,false);
+        }).fail(function(){toastr.error('Import gagal. Muat ulang halaman dan periksa file atau log aplikasi.');})
+        .always(function(){$('#kotakUpload').prop('disabled',false);input.value='';});
+    });
+
+    $.fn.dataTableExt.oApi.fnPagingInfo = function(oSettings) {
+        return {
+            "iStart": oSettings._iDisplayStart,
+            "iEnd": oSettings.fnDisplayEnd(),
+            "iLength": oSettings._iDisplayLength,
+            "iTotal": oSettings.fnRecordsTotal(),
+            "iFilteredTotal": oSettings.fnRecordsDisplay(),
+            "iPage": Math.ceil(oSettings._iDisplayStart / oSettings._iDisplayLength),
+            "iTotalPages": Math.ceil(oSettings.fnRecordsDisplay() / oSettings._iDisplayLength)
+        };
+    };
+    var t = $("#tbldata").dataTable({
+        dom: '<"top"if>rt<"bottom"p>',
+        initComplete: function() {
+            var api = this.api();
+            $('#tbldata_filter input')
+                .off('.DT')
+                // melakukan proses ketika ada input otomatis
+                .on('input.DT', function() {
+                    api.search(this.value).draw();
+                });
+        },
+        oLanguage: {
+            sProcessing: "Sedang Mengambil Data"
+        },
+        processing: true,
+        // stateSave: true,
+        // serverSide: true,
+        searching: true,
+        ordering: true,
+        ajax: {
+            "url": "/kesehatan/pemeriksaan_reproduksi/get_data",
+            "type": "POST"
+        },
+        columns: [{
+                "data": "idpemeriksaan",
+                "orderable": false
+            },
+            {
+                "data": "tanggal",
+                "class": "text-center",
+                "render": function(data, display, row) {
+                    return data.substr(0, 10) 
+                }
+            },
+            {
+                "data": "tagsapi",
+                "class": "text-center"
+            },
+            {
+                "data": "nomorregister",
+                "class": "text-center"
+            },
+            {
+                "data": "diagnosa"
+            },
+            {
+                "data": "pengobatan"
+            },
+            {
+                "data": "namapetugas"
+            },
+            {
+                "data": "keterangan"
+            },
+            {
+                "data": "aksi"
+            },
+        ],
+
+        order: [
+            [1, 'desc'],
+        ],
+        rowCallback: function(row, data, iDisplayIndex) {
+            var info = this.fnPagingInfo();
+            var page = info.iPage;
+            var length = info.iLength;
+            var index = page * length + (iDisplayIndex + 1);
+            $('td:eq(0)', row).html(index);
+        },
+        dom: 'Bfrtip',
+        responsive: true,
+        lengthMenu:[
+            [10,20,25,50,-1],
+            ["10 baris","20 baris","25 baris","50 baris","Semua Baris"],
+        ],
+        buttons: [
+            'pageLength', 'excel', 'pdf', 'print'
+        ], 
+    });
+
+    $('#tbldata').on('click', '#editdata', function() {
+        var id = $(this).data('id');
+        $.ajax({
+            type: "GET",
+            url: "/kesehatan/pemeriksaan_reproduksi/get_data_by_id/" + id,
+            success: function(msg) {
+                var data = JSON.parse(msg);
+                $('#edtidpemeriksaan').val(id);
+                tgl=data['tanggal'];
+                tanggal=tgl.substr(0,10);
+                $('#edttanggal').val(tanggal);
+                $('#edttagsapi').val(data['tagsapi']); 
+                $('#edtnomorregister').val(data['nomorregister']);
+                $('#edtidsapi').val(data['idsapi']);
+                $('#edtdiagnosa').val(data['diagnosa']); 
+                $('#edtpengobatan').val(data['pengobatan']);
+                $('#edtidpetugas').val(data['idpetugas']);
+                $('#edtnamapetugas').val(data['namapetugas']);
+                $('#edtketerangan').val(data['keterangan']);
+            }
+        })
+        $('#Modaledit').modal('show');
+    });
+    $('#tbldata').on('click', '#hapusdata', function() {
+        var id = $(this).data('id');
+        $('#Modalhapus').modal('show');
+        $('[name="id"]').val(id);
+    });
+    $('#tambahdata').on('click', function() {
+        $('#Modaltambah').modal('show');
+    });
+
+    $('#frmtambah').submit(function(e) {
+        let tagsapi = $('#tagsapi').val();
+        let idsapi = $('#idsapi').val();
+
+        if (tagsapi.trim() == "") {
+            $('#tagsapierr').html('Tag Sapi harus diisi');
+            e.preventDefault();
+        } else
+        if (idsapi.trim() == "") {
+            $('#tagsapierr').html('Tag Sapi tidak terdaftar');
+            e.preventDefault();
+        }
+    });
+    $("#tagsapi").coolautosuggest({
+        url: "/identifikasi/sapi/get_data_bytagsapi/",
+        showDescription: true,
+        width: 400,
+        onSelected: function(result) {
+
+            if (result != null) {
+                $('#idsapi').val(result.id);
+                $('#nomorregister').val(result.description);
+            } else {
+
+            }
+        }
+    });
+    $("#namapetugas").coolautosuggest({
+        url: "/identifikasi/petugas/get_data_bynama/",
+        showDescription: true,
+        width: 400,
+        onSelected: function(result) {
+
+            if (result != null) {
+                $('#idpetugas').val(result.id);
+            } else {
+
+            }
+        }
+    });
+});
+</script>
+</body>
+
+</html>

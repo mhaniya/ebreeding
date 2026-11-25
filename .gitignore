@@ -16,3 +16,9 @@ application/logs/*
 !application/logs/index.html
 !application/logs/.htaccess
 /vendor/
+
+# Uploaded media/files
+assets/images/upload/*
+!assets/images/upload/index.html
+assets/files/upload/*
+!assets/files/upload/index.html
